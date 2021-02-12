@@ -1,5 +1,5 @@
 'use strict';
-const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const {
   Model
 } = require('sequelize');
@@ -14,71 +14,84 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
     }
   };
-  // We're going to use some sequelize validation here.
   user.init({
     name: {
       type: DataTypes.STRING,
       validate: {
-        len: [1,99],
-        msg: 'Name must be between 1 and 99 characters.'
-      }
+        len: {
+          args: [1,99],
+          msg: "Name must be between 1 and 99 characters",
+        },
+      },
     },
     email: {
       type: DataTypes.STRING,
       validate: {
         isEmail: {
-          msg: 'Invalid Email.'
+          args: true,
+          msg: 'Invalid Email',
         },
       },
     },
     password: {
       type: DataTypes.STRING,
       validate: {
-        len: [8,99],
-        msg: 'Password must be between 8 and 99 characters',
+        len: {
+          args: [8,99],
+          msg: "Password must be between 8 and 88 characters",
+        },
+      },
+      get() {
+        return () => this.getDataValue('password');
+      },
+    },
+    salt: {
+      type: DataTypes.STRING,
+      get() {
+        return () => this.getDataValue('salt');
       },
     },
   }, {
     sequelize,
     modelName: 'user',
   });
-  // NEW NEW we add a hook to change intercept the event of a user being created
-  user.addHook('beforeCreate', (pendingUser) => {
-    // Very simlar to client side js events, but these are lifecycle events!
-    // Lookup sequalize hooks and lifecycle event to find all other events and call order.
-    let hash = bcrypt.hashSync(pendingUser.password, 12); // encryption up to 12 binary numbers
-
-    /*
-      For some reference:
-      bcrypt:
-        A module that can implement a specific algorthim for encypting / decypting data (lookup cryptography).
-        It's been used for a long time and has an abundance of downloads.
-
-      Here's also some bcrypt alternatives: if interested.
-
-      simplecrypt: for very simple encryptions and decryptions. Probably not useful for production.
-      bcrypt.js: is another alternative that has NO dependancies.
-
-      lastly, if you want use node's built in crypto.scrypt you can as well.
-
-    */
-    pendingUser.password = hash;
-  });
   
-  // Here we create a method function for checking if the hashed password is 
+  // So in this version of creating a hash, as opposed to
+  // bcrypt, this using the built-in module crypto to hash text.
+  const encryptPassword = function(plainText, salt) {
+    return crypto
+    .createHash('RSA-SHA256')
+    .update(plainText)
+    .update(salt)
+    .digest('hex')
+  }
+  
+  user.generateSalt = function() {
+    return crypto.randomBytes(16).toString('base64');
+  }
+
   user.prototype.validPassword = function(typedPassword) {
-    return bcrypt.compareSync(typedPassword, this.password);
+    return encryptPassword(typedPassword, this.salt()) === this.password();
   }
   
-  // just a way to return the user instance object as JSON and remove the password.
-  user.prototype.toJSON = function() {
-    let userData = this.get();
-    delete userData.password;
-    return userData;
+  const setSaltAndPassword = User => {
+    if (User.changed('password')) {
+      User.salt = user.generateSalt();
+      User.password = encryptPassword(User.password(), User.salt());
+    }
   }
   
-  // I'm going to write some other code that uses bcrypt.js just because there are problems with bcrypt.
+  user.addHook('beforeCreate', user => setSaltAndPassword(user));
+  user.addHook('beforeUpdate', user => setSaltAndPassword(user));
+  
+  // May not need because of get methods
+  // user.toJSON = function() {
+  //   let userData = this.get();
+  //   delete userData.password;
+  //   delete userData.salt;
+  //   return userData;
+  // }
+
+  
   return user;
 };
-
-

@@ -38,13 +38,10 @@ app.use(passport.session()); // Adds a session
 // Flash Middleware
 app.use(flash());
 app.use((req, res, next) => {
-  // console.log(res.locals);
   res.locals.alerts = req.flash();
   res.locals.currentUser = req.user;
   next();
 });
-
-// BUT WAIT, THERE'S more MIDDLEWARE in the middleware folder
 
 app.get('/', (req, res) => {
   res.render('index');
