@@ -34,7 +34,6 @@ passport.use(new LocalStrategy({
     try {
         const user = await db.user.findOne({ where: { email } });
         // we have to check if there is a user and if there is a valid password.
-
         if (!user || !user.validPassword(password)) {
             callback(null, false);
         } else {

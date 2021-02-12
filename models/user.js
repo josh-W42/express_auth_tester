@@ -58,12 +58,17 @@ module.exports = (sequelize, DataTypes) => {
   
   // So in this version of creating a hash, as opposed to
   // bcrypt, this using the built-in module crypto to hash text.
+  // const encryptPassword = function(plainText, salt) {
+  //   return crypto
+  //   .createHash('RSA-SHA256')
+  //   .update(plainText)
+  //   .update(salt)
+  //   .digest('hex')
+  // }
+
+  // Let's test scrypt.
   const encryptPassword = function(plainText, salt) {
-    return crypto
-    .createHash('RSA-SHA256')
-    .update(plainText)
-    .update(salt)
-    .digest('hex')
+    return crypto.scryptSync(plainText, salt, 64).toString('hex');
   }
   
   user.generateSalt = function() {
