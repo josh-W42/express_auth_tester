@@ -1,5 +1,8 @@
 # Express Authentication
 
+***
+Note: Everything below is part of a template. What's new in this repo is just me testing out different methods of password encryption.
+***
 Express authentication template using Passport + flash messages + custom middleware
 
 ## What it includes
